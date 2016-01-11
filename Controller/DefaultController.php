@@ -2,6 +2,7 @@
 
 namespace BCC\CronManagerBundle\Controller;
 
+use Symfony\Component\HttpFoundation\Request;
 use \Symfony\Component\Serializer\Encoder\JsonEncoder;
 use \Symfony\Component\Serializer\Serializer;
 use \Symfony\Component\HttpFoundation\Response;
@@ -24,7 +25,7 @@ class DefaultController extends Controller
         $this->addFlash('message', $cm->getOutput());
         $this->addFlash('error', $cm->getError());
 
-        $form = $this->createForm(new CronType(), new Cron());
+        $form = $this->createCronForm(new Cron());
 
         return $this->render('BCCCronManagerBundle:Default:index.html.twig', array(
             'crons' => $cm->get(),
@@ -36,26 +37,25 @@ class DefaultController extends Controller
     /**
      * Add a cron to the cron table
      *
+     * @param Request $request
+     *
      * @return \Symfony\Bundle\FrameworkBundle\Controller\Response
      */
-    public function addAction()
+    public function addAction(Request $request)
     {
         $cm = new CronManager();
         $cron = new Cron();
         $this->addFlash('message', $cm->getOutput());
         $this->addFlash('error', $cm->getError());
-        $form = $this->createForm(new CronType(), $cron);
+        $form = $this->createCronForm($cron);
 
-        $request = $this->get('request');
-        if ('POST' == $request->getMethod()) {
-            $form->handleRequest($request);
-            if ($form->isValid()) {
-                $cm->add($cron);
-                $this->addFlash('message', $cm->getOutput());
-                $this->addFlash('error', $cm->getError());
+        $form->handleRequest($request);
+        if ($form->isValid()) {
+            $cm->add($cron);
+            $this->addFlash('message', $cm->getOutput());
+            $this->addFlash('error', $cm->getError());
 
-                return $this->redirect($this->generateUrl('BCCCronManagerBundle_index'));
-            }
+            return $this->redirect($this->generateUrl('BCCCronManagerBundle_index'));
         }
 
         return $this->render('BCCCronManagerBundle:Default:index.html.twig', array(
@@ -69,27 +69,26 @@ class DefaultController extends Controller
      * Edit a cron
      *
      * @param $id The line of the cron in the cron table
+     * @param Request $request
+     *
      * @return \Symfony\Bundle\FrameworkBundle\Controller\RedirectResponse|\Symfony\Bundle\FrameworkBundle\Controller\Response
      */
-    public function editAction($id)
+    public function editAction($id, Request $request)
     {
         $cm = new CronManager();
         $crons = $cm->get();
         $this->addFlash('message', $cm->getOutput());
         $this->addFlash('error', $cm->getError());
-        $form = $this->createForm(new CronType(), $crons[$id]);
+        $form = $this->createCronForm($crons[$id]);
 
-        $request = $this->get('request');
-        if ('POST' == $request->getMethod()) {
-            $form->handleRequest($request);
-            if ($form->isValid()) {
-                $cm->write();
+        $form->handleRequest($request);
+        if ($form->isValid()) {
+            $cm->write();
 
-                $this->addFlash('message', $cm->getOutput());
-                $this->addFlash('error', $cm->getError());
+            $this->addFlash('message', $cm->getOutput());
+            $this->addFlash('error', $cm->getError());
 
-                return $this->redirect($this->generateUrl('BCCCronManagerBundle_index'));
-            }
+            return $this->redirect($this->generateUrl('BCCCronManagerBundle_index'));
         }
 
         return $this->render('BCCCronManagerBundle:Default:edit.html.twig', array(
@@ -141,9 +140,11 @@ class DefaultController extends Controller
      * Remove a cron from the cron table
      *
      * @param $id The line of the cron in the cron table
+     * @param Request $request
+     *
      * @return \Symfony\Bundle\FrameworkBundle\Controller\RedirectResponse
      */
-    public function removeAction($id)
+    public function removeAction($id, Request $request)
     {
         $cm = new CronManager();
         $this->addFlash('message', $cm->getOutput());
@@ -194,5 +195,16 @@ class DefaultController extends Controller
         $session = $this->get('session');
 
         $session->getFlashBag()->add($type, $message);
+    }
+
+    private function createCronForm($data)
+    {
+        if (method_exists('Symfony\Component\Form\AbstractType', 'getBlockPrefix')) {
+            $type = 'BCC\CronManagerBundle\Form\Type\CronType';
+        } else {
+            $type = new CronType();
+        }
+
+        return $this->createForm($type, $data);
     }
 }
